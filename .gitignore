@@ -1,2 +1,5 @@
 refs
 PLAN.md
+.vscode/
+build/
+scripts
