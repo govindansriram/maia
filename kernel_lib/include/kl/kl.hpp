@@ -9,3 +9,7 @@
 #include <kl/layout/tma_desc.hpp>
 #include <kl/layout/umma_desc.hpp>
 
+#include <kl/core/barrier.hpp>
+#include <kl/core/kernel.hpp>
+#include <kl/core/tma.hpp>
+#include <kl/core/warp.hpp>
