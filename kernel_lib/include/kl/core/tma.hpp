@@ -9,6 +9,8 @@
 #include <kl/cute.hpp>
 #include <kl/layout/smem_tile.hpp>
 #include <kl/layout/tma_desc.hpp>
+#include <kl/ptx/fence.hpp>
+#include <kl/ptx/mbarrier.hpp>
 
 // Device side of TMA: copy whole SmemTiles between shared memory and a global tensor described
 // by a TmaLoad / TmaStore (see layout/tma_desc.hpp). Each call is made by one whole warp; one
@@ -48,17 +50,17 @@ KL_DEVICE void prefetch(TmaDesc<Tile, Direction, Rank> const& desc) {
 }
 
 // Load the tile at `c` into `dst`. Completion is signalled on `bar`, which must already expect
-// Tile::bytes for this phase (barrier::arrive_expect_tx); out-of-bounds elements are zero-filled
-// and still count toward those bytes.
+// Tile::bytes for this phase (bar.arrive_expect_tx); out-of-bounds elements are zero-filled and
+// still count toward those bytes.
 template <SmemTileType Tile, int Rank>
-KL_DEVICE void tma_load(Tile& dst, TmaLoad<Tile, Rank> const& desc, TileCoord<Rank> const& c, uint64_t* bar) {
+KL_DEVICE void tma_load(Tile& dst, TmaLoad<Tile, Rank> const& desc, TileCoord<Rank> const& c, Mbarrier& bar) {
   assert(dst.smem_u32() % Tile::alignment == 0);
   if (elect_one()) {
     for (int i = 0; i < TmaBox<Tile>::count; ++i) {
       int32_t crd[Rank];
       detail::box_coords<Tile>(c, i, crd);
       detail::with_coords(crd, [&](auto... x) {
-        cute::SM90_TMA_LOAD::copy(desc.get(), bar, static_cast<uint64_t>(cute::TMA::CacheHintSm90::EVICT_NORMAL),
+        cute::SM90_TMA_LOAD::copy(desc.get(), bar.ptr(), static_cast<uint64_t>(cute::TMA::CacheHintSm90::EVICT_NORMAL),
                                   dst.storage + TmaBox<Tile>::smem_offset(i), x...);
       });
     }
@@ -73,7 +75,7 @@ KL_DEVICE void tma_load(Tile& dst, TmaLoad<Tile, Rank> const& desc, TileCoord<Ra
 template <SmemTileType Tile, int Rank>
 KL_DEVICE void tma_store(TmaStore<Tile, Rank> const& desc, TileCoord<Rank> const& c, Tile const& src) {
   assert(src.smem_u32() % Tile::alignment == 0);
-  cutlass::arch::fence_view_async_shared();  // make generic-proxy smem writes visible to TMA
+  fence_view_async_shared();  // make this warp's smem writes visible to TMA
   __syncwarp();
   if (lane_id() == 0) {
     for (int i = 0; i < TmaBox<Tile>::count; ++i) {

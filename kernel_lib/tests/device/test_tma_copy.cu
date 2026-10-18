@@ -21,7 +21,7 @@ namespace {
 template <typename Tile>
 struct CopySmem {
   Tile tile;
-  uint64_t bar;
+  kl::Mbarrier bar;
 };
 
 // One single-warp CTA per tile (blockIdx = tile coordinate). The tile is TMA-loaded, then
@@ -51,13 +51,13 @@ __global__ void copy_kernel(const __grid_constant__ kl::TmaLoad<Tile, Rank> src,
   if constexpr (Rank == 3) c.v[0] = blockIdx.z;
 
   if (kl::elect_one()) {
-    kl::barrier::init(&s.bar, 1);
-    kl::barrier::fence_init();
+    s.bar.init(1);
+    kl::fence_mbarrier_init();
   }
   __syncwarp();
-  if (kl::elect_one()) kl::barrier::arrive_expect_tx(&s.bar, Tile::bytes);
-  kl::tma_load(s.tile, src, c, &s.bar);
-  kl::barrier::wait(&s.bar, 0);
+  if (kl::elect_one()) s.bar.arrive_expect_tx(Tile::bytes);
+  kl::tma_load(s.tile, src, c, s.bar);
+  s.bar.wait(0);
 
   kl::tma_store(out_tma, c, s.tile);
 
@@ -107,7 +107,7 @@ void expect_copy(Problem p) {
 
   auto kernel = copy_kernel<Tile, Rank, MisalignSmem>;
   ASSERT_EQ(kl::set_smem_size<CopySmem<Tile>>(kernel), cudaSuccess);
-  dim3 grid((p.cols + Tile::cols - 1) / Tile::cols, (p.rows + Tile::rows - 1) / Tile::rows, p.batch);
+  dim3 grid(cute::ceil_div(p.cols, Tile::cols), cute::ceil_div(p.rows, Tile::rows), p.batch);
   kernel<<<grid, 32, kl::smem_bytes<CopySmem<Tile>>>>>(load, store, thrust::raw_pointer_cast(out_threads.data()),
                                                         p.rows, p.cols, thrust::raw_pointer_cast(misalignment.data()));
   ASSERT_EQ(cudaDeviceSynchronize(), cudaSuccess);

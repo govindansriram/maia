@@ -15,4 +15,3 @@
 #include <cute/arch/copy_sm90_tma.hpp>    // cp.async.bulk.tensor loads and stores
 
 #include <cutlass/numeric_types.h>
-#include <cutlass/arch/barrier.h>          // mbarrier
