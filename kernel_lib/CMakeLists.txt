@@ -4,6 +4,11 @@ if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
   set(CMAKE_CUDA_ARCHITECTURES 100a)
 endif()
 
+# Release unless asked otherwise, matching scripts/remote.sh; -DCMAKE_BUILD_TYPE=Debug keeps assert() on.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
 project(kl LANGUAGES CXX CUDA)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

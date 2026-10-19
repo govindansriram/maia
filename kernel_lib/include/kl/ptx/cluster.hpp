@@ -23,8 +23,8 @@ KL_DEVICE uint32_t cluster_rank() {
 
 // The same variable as `local` (a pointer into this CTA's shared memory), but in the CTA with rank
 // `rank` of this cluster: an ordinary pointer, so plain C++ loads and stores of any width work
-// through it (a uint4 store is a single 16-byte ST.E.128). The accesses are plain, unordered
-// ones: publish stores with a Sem::release peer arrive or fence_release_cluster() (examples.md).
+// through it. The accesses are plain, unordered ones: publish stores with a Sem::release peer
+// arrive or fence_release_cluster() (examples.md).
 // This is the generic form, mapa.u64. Mbarrier::peer() uses the .shared::cluster form,
 // mapa.shared::cluster.u32, whose 32-bit result only .shared::cluster PTX instructions (the
 // mbarrier ones) can take and C++ cannot dereference.

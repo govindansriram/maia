@@ -85,6 +85,8 @@ class Mbarrier {
   }
 
   // Arrivals from this CTA are seen by this CTA's waiters, so CTA scope is enough.
+  // Always release (here and in arrive_expect_tx): at CTA scope it compiles to the same SASS as
+  // relaxed, so there is no cheaper option.
   // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive
   KL_DEVICE void arrive() {
     asm volatile("mbarrier.arrive.release.cta.shared::cta.b64 _, [%0];" ::"r"(smem_u32()) : "memory");
@@ -127,10 +129,12 @@ class Mbarrier {
     return done != 0;
   }
 
-  // Block until the phase with parity `parity` has completed. The retry loop is written in PTX
-  // rather than C++ so ptxas emits a quick non-blocking phase check before the suspending loop.
-  // `suspend_ns` caps how long one try_wait may sleep before retrying (10 ms, as in CUTLASS);
-  // the loop, not the hint, decides how long we wait overall.
+  // Block until the phase with parity `parity` has completed. Each try_wait suspends the thread
+  // until the phase completes or a time limit passes, whichever comes first; on a timeout it
+  // returns false and the loop tries again. `suspend_ns` replaces the hardware's default limit
+  // with 10 ms (CUTLASS's value). It is not a delay, since the thread wakes as soon as the phase
+  // completes, and it does not bound the total wait. The loop is in PTX rather than C++ so ptxas
+  // emits a quick non-blocking phase check before the suspending loop.
   // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait
   template <Scope Sc = Scope::cta>
   KL_DEVICE void wait(uint32_t parity) {

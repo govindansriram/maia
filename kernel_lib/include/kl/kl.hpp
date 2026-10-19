@@ -5,7 +5,9 @@
 #include <kl/types.hpp>
 
 #include <kl/ptx/order.hpp>
+#include <kl/ptx/bulk_group.hpp>
 #include <kl/ptx/cluster.hpp>
+#include <kl/ptx/elect.hpp>
 #include <kl/ptx/fence.hpp>
 #include <kl/ptx/mbarrier.hpp>
 

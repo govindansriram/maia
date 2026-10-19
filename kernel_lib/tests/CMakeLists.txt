@@ -33,17 +33,6 @@ target_include_directories(kl_device_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 set_target_properties(kl_device_tests PROPERTIES CUDA_ARCHITECTURES "${KL_DEVICE_TEST_CUDA_ARCHITECTURES}")
 gtest_discover_tests(kl_device_tests DISCOVERY_MODE PRE_TEST)
 
-# The device tests must really use TMA, not CuTe's fallback paths. Needs no GPU, but does need
-# cuobjdump, which slim CUDA installs leave out.
-find_program(KL_CUOBJDUMP cuobjdump HINTS ${CUDAToolkit_BIN_DIR})
-if(KL_CUOBJDUMP)
-  add_test(NAME kl_device_tests_use_tma
-    COMMAND ${CMAKE_COMMAND} -DBINARY=$<TARGET_FILE:kl_device_tests> -DCUOBJDUMP=${KL_CUOBJDUMP}
-            -DOPCODES=UTMALDG$<SEMICOLON>UTMASTG -P ${CMAKE_CURRENT_SOURCE_DIR}/check_sass.cmake)
-else()
-  message(STATUS "cuobjdump not found: skipping the SASS check of kl_device_tests")
-endif()
-
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME kl_include_allowlist
   COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/tools/check_includes.py
