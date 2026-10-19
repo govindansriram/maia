@@ -17,8 +17,21 @@ add_executable(kl_unit_tests
   unit/test_umma_desc.cu
   unit/test_tma_desc.cu)
 target_link_libraries(kl_unit_tests PRIVATE kl GTest::gtest_main)
+target_include_directories(kl_unit_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 set_target_properties(kl_unit_tests PROPERTIES CUDA_ARCHITECTURES "${KL_TEST_CUDA_ARCHITECTURES}")
 gtest_discover_tests(kl_unit_tests DISCOVERY_MODE PRE_TEST)
+
+# Device tests issue Blackwell-only instructions (TMA, mbarrier, later tcgen05), so they are
+# built for sm_100a alone and skip on other GPUs.
+set(KL_DEVICE_TEST_CUDA_ARCHITECTURES "100a" CACHE STRING "CUDA architectures for kl's device tests")
+
+add_executable(kl_device_tests
+  device/test_tma_copy.cu
+  device/test_barrier_patterns.cu)
+target_link_libraries(kl_device_tests PRIVATE kl GTest::gtest_main)
+target_include_directories(kl_device_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+set_target_properties(kl_device_tests PROPERTIES CUDA_ARCHITECTURES "${KL_DEVICE_TEST_CUDA_ARCHITECTURES}")
+gtest_discover_tests(kl_device_tests DISCOVERY_MODE PRE_TEST)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME kl_include_allowlist

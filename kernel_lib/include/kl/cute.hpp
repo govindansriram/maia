@@ -10,5 +10,7 @@
 #include <cute/swizzle_layout.hpp>
 #include <cute/arch/util.hpp>
 #include <cute/arch/mma_sm100_desc.hpp>
+#include <cute/arch/copy_sm90_desc.hpp>   // TMA descriptor prefetch, cache hints
+#include <cute/arch/copy_sm90_tma.hpp>    // cp.async.bulk.tensor loads and stores
 
 #include <cutlass/numeric_types.h>
